@@ -41,6 +41,7 @@ export interface Settings {
     autoUpdate: boolean;
     autoUpdateNotification: boolean,
     useQuickCss: boolean;
+    useQuickJs: boolean;
     eagerPatches: boolean;
     enabledThemes: string[];
     enableReactDevtools: boolean;
