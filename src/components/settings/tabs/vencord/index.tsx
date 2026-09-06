@@ -51,13 +51,18 @@ type KeysOfType<Object, Type> = {
 }[keyof Object];
 
 function Switches() {
-    const settings = useSettings(["useQuickCss", "enableReactDevtools", "frameless", "winNativeTitleBar", "transparent", "winCtrlQ", "disableMinSize"]);
+    const settings = useSettings(["useQuickCss", "useQuickJs", "enableReactDevtools", "frameless", "winNativeTitleBar", "transparent", "winCtrlQ", "disableMinSize"]);
 
     const Switches = [
         {
             key: "useQuickCss",
             title: "Enable Custom CSS",
             description: "Apply your configured QuickCSS"
+        },
+        {
+            key: "useQuickJs",
+            title: "Enable Custom JS",
+            description: "Apply your configured QuickJS"
         },
         !IS_WEB && (!IS_DISCORD_DESKTOP || !IS_WINDOWS ? {
             key: "frameless",
@@ -196,6 +201,11 @@ function VencordSettings() {
                         Icon={PaintbrushIcon}
                         text="Edit QuickCSS"
                         action={() => VencordNative.quickCss.openEditor()}
+                    />
+                    <QuickAction
+                        Icon={LogIcon}
+                        text="Edit QuickJS"
+                        action={() => VencordNative.quickJs.openEditor()}
                     />
                     {!IS_WEB && (
                         <>
