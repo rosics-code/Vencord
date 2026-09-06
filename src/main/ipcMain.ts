@@ -31,7 +31,7 @@ import { join } from "path";
 
 import { registerCspIpcHandlers } from "./csp/manager";
 import { getThemeInfo, stripBOM, UserThemeHeader } from "./themes";
-import { ALLOWED_PROTOCOLS, QUICK_CSS_PATH, SETTINGS_DIR, THEMES_DIR } from "./utils/constants";
+import { ALLOWED_PROTOCOLS, QUICK_CSS_PATH, QUICK_JS_PATH, SETTINGS_DIR, THEMES_DIR } from "./utils/constants";
 import { ensureSafePath } from "./utils/ensureSafePath";
 import { makeLinksOpenExternally } from "./utils/externalLinks";
 
@@ -61,6 +61,17 @@ async function listThemes(): Promise<UserThemeHeader[]> {
 
     return themeInfo;
 }
+
+function readJs() {
+    return readFile(QUICK_JS_PATH, "utf-8").catch(() => "");
+}
+
+ipcMain.handle(IpcEvents.OPEN_QUICKJS, () => shell.openPath(QUICK_JS_PATH));
+
+ipcMain.handle(IpcEvents.GET_QUICK_JS, () => readJs());
+ipcMain.handle(IpcEvents.SET_QUICK_JS, (_, js) =>
+    writeFileSync(QUICK_JS_PATH, js)
+);
 
 function getThemeData(fileName: string) {
     fileName = fileName.replace(/\?v=\d+$/, "");
@@ -126,16 +137,26 @@ ipcMain.handle(IpcEvents.INIT_FILE_WATCHERS, ({ sender }) => {
         sender.postMessage(IpcEvents.THEME_UPDATE, void 0);
     }));
 
+    let quickJsWatcher: FSWatcher | undefined;
+
+    open(QUICK_JS_PATH, "a+").then(fd => {
+    fd.close();
+    quickJsWatcher = watch(QUICK_JS_PATH, { persistent: false }, debounce(async () => {
+        sender.postMessage(IpcEvents.QUICK_JS_UPDATE, await readJs());
+    }, 50));
+    }).catch(() => { });
+
     if (IS_DEV) {
         rendererCssWatcher = watch(RENDERER_CSS_PATH, { persistent: false }, async () => {
             sender.postMessage(IpcEvents.RENDERER_CSS_UPDATE, await readFile(RENDERER_CSS_PATH, "utf-8"));
         });
     }
 
-    fsWatchers = [quickCssWatcher, themesWatcher, rendererCssWatcher].filter(Boolean) as FSWatcher[];
+    fsWatchers = [quickCssWatcher, quickJsWatcher, themesWatcher, rendererCssWatcher].filter(Boolean) as FSWatcher[];
 
     sender.once("destroyed", () => {
         quickCssWatcher?.close();
+        quickJsWatcher?.close();
         themesWatcher.close();
         rendererCssWatcher?.close();
         fsWatchers = [];
